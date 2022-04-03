@@ -1,0 +1,35 @@
+[package]
+name = "dad-bot"
+version = "1.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies.matrix-sdk]
+version = "0.4.1"
+default-features = false
+features = ["encryption", "sled_cryptostore", "sled_state_store", "require_auth_for_profile_requests", "rustls-tls", "markdown"]
+
+[dependencies.mrsbfh]
+git = "https://github.com/MTRNord/mrsbfh.git"
+branch = "MTRNord/issue-12"
+# version = "0.4.1"
+default-features = false
+features = ["rustls", "macros"]
+
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = "0.2"
+tracing-futures = "0.2"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "macros", "parking_lot"] }
+clap = { version = "3.1", features = ["derive", "env"] }
+serde = "1"
+async-trait = "0.1"
+thiserror = "1"
+regex = "1"
+rand = { version = "0.8", features = ["getrandom"] }
+rand_chacha = "0.3"
+async_once = "0.2"
+lazy_static = "1"
+chrono = "0.4"
+getset = "0.1"
+db = { path = "../db"}

@@ -1,0 +1,18 @@
+[package]
+name = "entity"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies.sea-orm]
+version = "0.7.1"
+features = [ "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "runtime-tokio-rustls", "macros"]
+default-features = false
+
+[dev-dependencies.sea-orm]
+version = "0.7.1"
+# Don't need all of the DBs for testing and integration, SQLite is fine
+features = [ "sqlx-sqlite", "runtime-tokio-rustls", "macros", "mock"]
+default-features = false
+
+[dependencies]

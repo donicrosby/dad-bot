@@ -1,0 +1,12 @@
+homeserver_url: "matrix.org"
+mxid: ""
+password: ""
+avatar: "mxc://jeansburger.net/5da8835e6fa32349295bdf3a346aee2d120e507d"
+store_path: "./store"
+session_path: "./session"
+dadded_regex: >-
+  \b(?P<im>(?:i|l)(?:(?:'|`|‛|‘|’|′|‵)?m| am))(?:\s+)(?P<dad_text>[^\.!?]+)
+db: 'sqlite://./db/dad.db?mode=rwc'
+epoch_length: 5
+dadded_chance: 2
+love_me_chance: 2
