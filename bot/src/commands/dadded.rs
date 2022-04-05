@@ -37,18 +37,22 @@ where
 }
 
 #[inline]
-fn duration_time_to_string(num: i64, period_name: &str) -> String {
-    match num {
+fn duration_time_to_string(num: i64, period_name: &str) -> (i64, String) {
+    let period_str = match num {
         0 => String::new(),
-        1 => format!("{} {}", num, period_name),
-        _ => format!("{} {}s", num, period_name),
-    }
+        1 => period_name.to_string(),
+        _ => format!("{}s", period_name),
+    };
+    (num, period_str)
 }
 
 #[inline]
-fn append_time_string_to_list(str: String, mut list: Vec<String>) -> Vec<String> {
-    if !str.is_empty() {
-        list.push(str);
+fn append_time_string_to_list(
+    str_list: (i64, String),
+    mut list: Vec<(i64, String)>,
+) -> Vec<(i64, String)> {
+    if str_list.0 > 0 {
+        list.push(str_list);
     }
     list
 }
@@ -63,7 +67,16 @@ fn get_time_string_from_duration(dur: Duration) -> String {
     let dur = dur - Duration::hours(dur.num_hours());
     let minutes = duration_time_to_string(dur.num_minutes(), "minute");
     let strings = append_time_string_to_list(minutes, strings);
-    strings.join(" ")
+    match strings.len() {
+        0 => String::from("instant"),
+        1 => strings[0].1.clone(),
+        _ => strings
+            .iter()
+            .filter(|v| v.0 > 0)
+            .map(|v| format!("{} {}", v.0, v.1))
+            .collect::<Vec<_>>()
+            .join(" "),
+    }
 }
 
 async fn get_dads<'a>(
@@ -104,9 +117,9 @@ mod tests {
         let single = duration_time_to_string(1, "day");
         let multiple = duration_time_to_string(2, "day");
 
-        assert_eq!(none, String::new());
-        assert_eq!(single, String::from("1 day"));
-        assert_eq!(multiple, String::from("2 days"));
+        assert_eq!(none, (0, String::new()));
+        assert_eq!(single, (1, String::from("day")));
+        assert_eq!(multiple, (2, String::from("days")));
         Ok(())
     }
 
@@ -125,6 +138,25 @@ mod tests {
 
         let time_str = get_time_string_from_duration(duration);
         assert_eq!(time_str, String::from("2 days 1 minute"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_time_string_from_duration_lone_item_is_unit() -> Result<(), Error> {
+        let duration = Duration::minutes(1);
+
+        let time_str = get_time_string_from_duration(duration);
+        assert_eq!(time_str, String::from("minute"));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_get_time_string_from_duration_less_than_a_minute_is_instant() -> Result<(), Error>
+    {
+        let duration = Duration::seconds(1);
+
+        let time_str = get_time_string_from_duration(duration);
+        assert_eq!(time_str, String::from("instant"));
         Ok(())
     }
 
@@ -149,11 +181,11 @@ mod tests {
 
         assert_eq!(
             dad_string_none,
-            String::from("I've dadded 0 times in the past 1 day")
+            String::from("I've dadded 0 times in the past day")
         );
         assert_eq!(
             dad_string_one,
-            String::from("I've dadded 1 time in the past 1 day")
+            String::from("I've dadded 1 time in the past day")
         );
 
         Ok(())

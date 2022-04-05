@@ -1,11 +1,11 @@
 use getset::{Getters, Setters};
-use rand::{RngCore};
+use rand::RngCore;
 
 #[derive(Debug, Clone)]
 pub enum EnabledChance {
     Off,
     Always,
-    In(i64)
+    In(i64),
 }
 
 #[derive(Debug, Clone, Getters, Setters)]
@@ -19,7 +19,9 @@ pub struct RngManager<R: RngCore + Send> {
 }
 
 impl<R> RngManager<R>
-where R: RngCore + Send {
+where
+    R: RngCore + Send,
+{
     pub fn new(dadded_chance: Option<i64>, love_me_chance: Option<i64>, rng: R) -> Self {
         let dadded_chance = match dadded_chance {
             None => EnabledChance::Always,
@@ -33,19 +35,17 @@ where R: RngCore + Send {
         };
         let love_me_chance = match love_me_chance {
             None => EnabledChance::Off,
-            Some(c) => {
-                match c {
-                    0 => EnabledChance::Off,
-                    1 => EnabledChance::Always,
-                    c => EnabledChance::In(c),
-                }
-            }
+            Some(c) => match c {
+                0 => EnabledChance::Off,
+                1 => EnabledChance::Always,
+                c => EnabledChance::In(c),
+            },
         };
 
         Self {
             dadded_chance,
             love_me_chance,
-            rng
+            rng,
         }
     }
 
@@ -57,11 +57,10 @@ where R: RngCore + Send {
     }
 
     pub fn should_love_you(&mut self) -> bool {
-
         match self.love_me_chance {
             EnabledChance::Off => false,
             EnabledChance::Always => true,
-            EnabledChance::In(c) => self.get_n_in_chance(c)
+            EnabledChance::In(c) => self.get_n_in_chance(c),
         }
     }
 
@@ -75,8 +74,8 @@ where R: RngCore + Send {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::rngs::mock::StepRng;
     use crate::errors::Error;
+    use rand::rngs::mock::StepRng;
 
     #[tokio::test]
     async fn test_should_dad() -> Result<(), Error> {

@@ -5,12 +5,11 @@ use db::sea_orm::DbConn;
 use db::utils::{dadded, epochs};
 use matrix_sdk::{ruma::MxcUri, Client, ClientConfig, Session as SDKSession, SyncSettings};
 use mrsbfh::{url::Url, utils::Session};
+use rand::SeedableRng;
+use rand_chacha::ChaChaRng;
 use std::{convert::TryFrom, error::Error, fs, path::Path, sync::Arc};
 use tokio::sync::Mutex;
 use tracing::*;
-use rand_chacha::ChaChaRng;
-use rand::SeedableRng;
-
 
 mod sync;
 
@@ -107,15 +106,13 @@ pub async fn start_sync(
 
     let epoch_length = config_options.get_epoch_length();
     info!("Initalizing Dadded Epoch Manager...");
-    let epoch = epochs::get_or_create_epoch(&*db.lock().await, &now.into(), epoch_length).await?;
+    let epoch = epochs::get_or_create_epoch(&*db.lock().await, &now, epoch_length).await?;
     let next_epoch =
         epochs::get_next_epoch_bound(&*db.lock().await, epoch.id, epoch_length).await?;
     let dadded = dadded::get_or_create_dad_from_epoch(&*db.lock().await, epoch.id).await?;
 
     let dad_manager = Arc::new(Mutex::new(DaddedManager::new(
-        epoch.id,
-        next_epoch.into(),
-        dadded.id,
+        epoch.id, next_epoch, dadded.id,
     )));
     info!("Intializing Dadded RNG Manager...");
 
@@ -125,7 +122,7 @@ pub async fn start_sync(
     let rng_manager = Arc::new(Mutex::new(RngManager::new(
         dadded_chance,
         love_me_chance,
-        rng
+        rng,
     )));
     client
         .register_event_handler(move |ev, room, client| {
@@ -140,7 +137,7 @@ pub async fn start_sync(
                 handler_config,
                 handler_db,
                 handler_dad_manager,
-                handler_rng_manager
+                handler_rng_manager,
             )
         })
         .await;

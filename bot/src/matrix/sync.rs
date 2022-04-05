@@ -12,11 +12,11 @@ use matrix_sdk::{
     },
     Client,
 };
+use rand::RngCore;
 use regex::{Regex, RegexBuilder};
 use std::sync::Arc;
 use tokio::sync::{Mutex, OnceCell};
 use tracing::*;
-use rand::RngCore;
 
 static DADDED_RE: OnceCell<Regex> = OnceCell::const_new();
 
@@ -93,9 +93,11 @@ async fn handle_dadded_text<T>(
     config: Arc<Mutex<Config<'static>>>,
     event: SyncMessageEvent<MessageEventContent>,
     room: Room,
-    rng: Arc<Mutex<RngManager<T>>>
+    rng: Arc<Mutex<RngManager<T>>>,
 ) -> Option<String>
-where T: RngCore + Send {
+where
+    T: RngCore + Send,
+{
     let config = &*config.lock().await;
     let rng = &mut *rng.lock().await;
     let dadded_regex = get_dadded_regex(config).await;
@@ -140,8 +142,8 @@ pub(crate) async fn on_room_message<T>(
     db: Arc<Mutex<DbConn>>,
     dad_handler: Arc<Mutex<DaddedManager>>,
     rng_handler: Arc<Mutex<RngManager<T>>>,
-)
-where T: RngCore + Send + 'static
+) where
+    T: RngCore + Send + 'static,
 {
     let cloned_config = Arc::clone(&config);
     info!("Ticking manager epoch...");
@@ -156,7 +158,14 @@ where T: RngCore + Send + 'static
         return;
     }
     if *room.own_user_id() != event.sender {
-        if let Some(text) = handle_dadded_text(cloned_config, event.clone(), room.clone(), Arc::clone(&rng_handler)).await {
+        if let Some(text) = handle_dadded_text(
+            cloned_config,
+            event.clone(),
+            room.clone(),
+            Arc::clone(&rng_handler),
+        )
+        .await
+        {
             if let matrix_sdk::room::Room::Joined(room) = room.clone() {
                 info!("Sending Dadded: {}", &text);
                 let content = AnyMessageEventContent::RoomMessage(MessageEventContent::new(

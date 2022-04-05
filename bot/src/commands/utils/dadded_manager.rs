@@ -36,13 +36,12 @@ impl DaddedManager {
     ) -> Result<&Self, Error> {
         if now > self.next_epoch {
             info!("Epoch boundry surpassed, creating new epoch...");
-            let new_epoch =
-                dbUtils::epochs::get_or_create_epoch(db, &now.into(), epoch_len).await?;
+            let new_epoch = dbUtils::epochs::get_or_create_epoch(db, &now, epoch_len).await?;
             let next_epoch =
                 dbUtils::epochs::get_next_epoch_bound(db, new_epoch.id, epoch_len).await?;
             let new_dadded =
                 dbUtils::dadded::get_or_create_dad_from_epoch(db, new_epoch.id).await?;
-            let next_bound: DateTime<Local> = next_epoch.into();
+            let next_bound: DateTime<Local> = next_epoch;
             info!("Next Epoch boundry is now {}", next_bound);
             self.set_epoch_id(new_epoch.id);
             self.set_next_epoch(next_bound);

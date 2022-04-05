@@ -12,8 +12,7 @@ struct EpochBounds {
     upper: DateTime<Local>,
 }
 
-fn get_epoch_boundry(date: &DateTime<Local>, epoch_len: Duration) -> Result<EpochBounds, Error>
-{
+fn get_epoch_boundry(date: &DateTime<Local>, epoch_len: Duration) -> Result<EpochBounds, Error> {
     let lower_bound = date.duration_trunc(epoch_len)?;
     let upper_bound = lower_bound + epoch_len;
     let bounds = EpochBounds {
@@ -26,8 +25,7 @@ fn get_epoch_boundry(date: &DateTime<Local>, epoch_len: Duration) -> Result<Epoc
 async fn filter_epochs_by_date_time(
     db: &DbConn,
     bounds: EpochBounds,
-) -> Result<Vec<Epoch::Model>, Error>
-{
+) -> Result<Vec<Epoch::Model>, Error> {
     let epochs = Epoch::Entity::find()
         .filter(Condition::all().add(epochs::Column::Epoch.between(bounds.lower, bounds.upper)))
         .all(db)
@@ -120,7 +118,7 @@ mod tests {
         let date = Utc.ymd(2022, 3, 16).and_hms_milli(12, 1, 2, 100);
         let duration = Duration::hours(1);
         let bounds_res = get_epoch_boundry(&date.into(), duration).unwrap();
-        let expected_res : DateTime<Local> = Utc.ymd(2022, 3, 16).and_hms_milli(12, 0, 0, 0).into();
+        let expected_res: DateTime<Local> = Utc.ymd(2022, 3, 16).and_hms_milli(12, 0, 0, 0).into();
         assert_eq!(bounds_res.lower.to_string(), expected_res.to_string());
     }
 
@@ -129,7 +127,7 @@ mod tests {
         let date = Utc.ymd(2022, 3, 16).and_hms_milli(12, 1, 2, 100);
         let duration = Duration::hours(1);
         let bounds_res = get_epoch_boundry(&date.into(), duration).unwrap();
-        let expected_res : DateTime<Local> = Utc.ymd(2022, 3, 16).and_hms_milli(13, 0, 0, 0).into();
+        let expected_res: DateTime<Local> = Utc.ymd(2022, 3, 16).and_hms_milli(13, 0, 0, 0).into();
         assert_eq!(bounds_res.upper.to_string(), expected_res.to_string());
     }
 
@@ -138,8 +136,8 @@ mod tests {
         let date = Utc.ymd(2022, 3, 16).and_hms_milli(12, 1, 2, 100);
         let duration = Duration::days(1);
         let bounds_res = get_epoch_boundry(&date.into(), duration).unwrap();
-        let lower_res : DateTime<Local> = Utc.ymd(2022, 3, 16).and_hms_milli(0, 0, 0, 0).into();
-        let upper_res : DateTime<Local> = Utc.ymd(2022, 3, 17).and_hms_milli(0, 0, 0, 0).into();
+        let lower_res: DateTime<Local> = Utc.ymd(2022, 3, 16).and_hms_milli(0, 0, 0, 0).into();
+        let upper_res: DateTime<Local> = Utc.ymd(2022, 3, 17).and_hms_milli(0, 0, 0, 0).into();
         assert_eq!(bounds_res.lower.to_string(), lower_res.to_string());
         assert_eq!(bounds_res.upper.to_string(), upper_res.to_string());
     }
@@ -149,8 +147,8 @@ mod tests {
         let date = Utc.ymd(2022, 3, 16).and_hms_milli(12, 1, 2, 100);
         let duration = Duration::hours(6);
         let bounds_res = get_epoch_boundry(&date.into(), duration).unwrap();
-        let lower_res : DateTime<Local> = Utc.ymd(2022, 3, 16).and_hms_milli(12, 0, 0, 0).into();
-        let upper_res : DateTime<Local> = Utc.ymd(2022, 3, 16).and_hms_milli(18, 0, 0, 0).into();
+        let lower_res: DateTime<Local> = Utc.ymd(2022, 3, 16).and_hms_milli(12, 0, 0, 0).into();
+        let upper_res: DateTime<Local> = Utc.ymd(2022, 3, 16).and_hms_milli(18, 0, 0, 0).into();
         assert_eq!(bounds_res.lower.to_string(), lower_res.to_string());
         assert_eq!(bounds_res.upper.to_string(), upper_res.to_string());
     }
@@ -161,8 +159,8 @@ mod tests {
         let duration = Duration::days(1);
         let init_bounds = get_epoch_boundry(&date.into(), duration).unwrap();
         let bounds_res = get_epoch_boundry(&init_bounds.upper, duration).unwrap();
-        let lower_res : DateTime<Local> = Utc.ymd(2022, 3, 17).and_hms_milli(0, 0, 0, 0).into();
-        let upper_res : DateTime<Local> = Utc.ymd(2022, 3, 18).and_hms_milli(0, 0, 0, 0).into();
+        let lower_res: DateTime<Local> = Utc.ymd(2022, 3, 17).and_hms_milli(0, 0, 0, 0).into();
+        let upper_res: DateTime<Local> = Utc.ymd(2022, 3, 18).and_hms_milli(0, 0, 0, 0).into();
         assert_eq!(bounds_res.lower.to_string(), lower_res.to_string());
         assert_eq!(bounds_res.upper.to_string(), upper_res.to_string());
     }
