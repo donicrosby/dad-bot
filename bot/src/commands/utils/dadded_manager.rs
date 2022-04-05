@@ -33,7 +33,7 @@ impl DaddedManager {
         db: &DbConn,
         now: DateTime<Local>,
         epoch_len: Duration,
-    ) -> Result<&Self, Error> {
+    ) -> Result<bool, Error> {
         if now > self.next_epoch {
             info!("Epoch boundry surpassed, creating new epoch...");
             let new_epoch = dbUtils::epochs::get_or_create_epoch(db, &now, epoch_len).await?;
@@ -49,9 +49,9 @@ impl DaddedManager {
             if !self.awake_since_last_epoch() {
                 self.set_awake_since_last_epoch(true);
             }
-            Ok(self)
+            Ok(true)
         } else {
-            Ok(self)
+            Ok(false)
         }
     }
 
@@ -84,9 +84,11 @@ mod tests {
 
         let cur_time = cur_time + duration;
 
-        mgr.check_for_epoch_update(&db, cur_time.into(), duration)
+        let epoch_changed = mgr
+            .check_for_epoch_update(&db, cur_time.into(), duration)
             .await?;
 
+        assert_eq!(epoch_changed, true);
         assert_eq!(*mgr.epoch_id(), epoch.id + 1);
         assert_eq!(*mgr.dadded_id(), dadded.id + 1);
         assert_eq!(*mgr.next_epoch(), next_epoch + duration);
@@ -108,9 +110,11 @@ mod tests {
 
         let cur_time = cur_time + time_passed;
 
-        mgr.check_for_epoch_update(&db, cur_time.into(), duration)
+        let epoch_changed = mgr
+            .check_for_epoch_update(&db, cur_time.into(), duration)
             .await?;
 
+        assert_eq!(epoch_changed, false);
         assert_eq!(*mgr.epoch_id(), epoch.id);
         assert_eq!(*mgr.dadded_id(), dadded.id);
         assert_eq!(*mgr.next_epoch(), next_epoch);

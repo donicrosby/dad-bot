@@ -13,6 +13,7 @@ use matrix_sdk::{
     Client,
 };
 use rand::RngCore;
+use rand::SeedableRng;
 use regex::{Regex, RegexBuilder};
 use std::sync::Arc;
 use tokio::sync::{Mutex, OnceCell};
@@ -96,7 +97,7 @@ async fn handle_dadded_text<T>(
     rng: Arc<Mutex<RngManager<T>>>,
 ) -> Option<String>
 where
-    T: RngCore + Send,
+    T: RngCore + SeedableRng + Send,
 {
     let config = &*config.lock().await;
     let rng = &mut *rng.lock().await;
@@ -109,17 +110,27 @@ where
     }
 }
 
-async fn dadded_manager_update_epoch(
+async fn dadded_manager_update_epoch<T>(
     dad_handler: Arc<Mutex<DaddedManager>>,
+    rng_handler: Arc<Mutex<RngManager<T>>>,
     config: Arc<Mutex<Config<'static>>>,
     db: Arc<Mutex<DbConn>>,
-) -> Result<(), Error> {
-    let mgr = &mut *dad_handler.lock().await;
+) -> Result<(), Error>
+where
+    T: RngCore + SeedableRng + Send,
+{
+    let dad_mgr = &mut *dad_handler.lock().await;
     let config = &*config.lock().await;
     let db = &*db.lock().await;
     let epoch_duration = config.get_epoch_length();
-    mgr.check_for_epoch_update(db, Local::now(), epoch_duration)
+    let epoch_changed = dad_mgr
+        .check_for_epoch_update(db, Local::now(), epoch_duration)
         .await?;
+    if let true = epoch_changed {
+        let rng_mgr = &mut *rng_handler.lock().await;
+        let new_rng = T::from_entropy();
+        rng_mgr.set_rng(new_rng);
+    }
     Ok(())
 }
 
@@ -143,12 +154,13 @@ pub(crate) async fn on_room_message<T>(
     dad_handler: Arc<Mutex<DaddedManager>>,
     rng_handler: Arc<Mutex<RngManager<T>>>,
 ) where
-    T: RngCore + Send + 'static,
+    T: RngCore + SeedableRng + Send + 'static,
 {
     let cloned_config = Arc::clone(&config);
     info!("Ticking manager epoch...");
     if let Err(e) = dadded_manager_update_epoch(
         Arc::clone(&dad_handler),
+        Arc::clone(&rng_handler),
         Arc::clone(&config),
         Arc::clone(&db),
     )

@@ -7,6 +7,7 @@ WORKDIR build
 COPY Cargo.toml .
 COPY db/ ./db
 COPY bot/ ./bot
+RUN cargo test
 RUN cargo build --release --bin dad-bot
 
 FROM ubuntu:${PROD_IMAGE_TAG}

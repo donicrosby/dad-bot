@@ -1,5 +1,5 @@
 use getset::{Getters, Setters};
-use rand::RngCore;
+use rand::{RngCore, SeedableRng};
 
 #[derive(Debug, Clone)]
 pub enum EnabledChance {
@@ -9,7 +9,7 @@ pub enum EnabledChance {
 }
 
 #[derive(Debug, Clone, Getters, Setters)]
-pub struct RngManager<R: RngCore + Send> {
+pub struct RngManager<R: RngCore + SeedableRng + Send> {
     #[getset(get, set = "pub")]
     dadded_chance: EnabledChance,
     #[getset(get, set = "pub")]
@@ -20,7 +20,7 @@ pub struct RngManager<R: RngCore + Send> {
 
 impl<R> RngManager<R>
 where
-    R: RngCore + Send,
+    R: RngCore + SeedableRng + Send,
 {
     pub fn new(dadded_chance: Option<i64>, love_me_chance: Option<i64>, rng: R) -> Self {
         let dadded_chance = match dadded_chance {
@@ -75,11 +75,11 @@ where
 mod tests {
     use super::*;
     use crate::errors::Error;
-    use rand::rngs::mock::StepRng;
+    use crate::integration_utils::SeedableStepRng;
 
     #[tokio::test]
     async fn test_should_dad() -> Result<(), Error> {
-        let mock_rng = StepRng::new(10, 1);
+        let mock_rng = SeedableStepRng::new(10, 1);
         let dad_chance = Some(10);
         let love_me_chance = None;
         let mut mgr = RngManager::new(dad_chance, love_me_chance, mock_rng);
@@ -92,7 +92,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_always_dad_some() -> Result<(), Error> {
-        let mock_rng = StepRng::new(10, 1);
+        let mock_rng = SeedableStepRng::new(10, 1);
         let dad_chance = Some(1);
         let love_me_chance = None;
         let mut mgr = RngManager::new(dad_chance, love_me_chance, mock_rng);
@@ -105,7 +105,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_always_dad_none() -> Result<(), Error> {
-        let mock_rng = StepRng::new(10, 1);
+        let mock_rng = SeedableStepRng::new(10, 1);
         let dad_chance = None;
         let love_me_chance = None;
         let mut mgr = RngManager::new(dad_chance, love_me_chance, mock_rng);
@@ -118,7 +118,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_should_love_you() -> Result<(), Error> {
-        let mock_rng = StepRng::new(10, 1);
+        let mock_rng = SeedableStepRng::new(10, 1);
         let dad_chance = None;
         let love_me_chance = Some(10);
         let mut mgr = RngManager::new(dad_chance, love_me_chance, mock_rng);
@@ -131,7 +131,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_should_love_you_always() -> Result<(), Error> {
-        let mock_rng = StepRng::new(10, 1);
+        let mock_rng = SeedableStepRng::new(10, 1);
         let dad_chance = None;
         let love_me_chance = Some(1);
         let mut mgr = RngManager::new(dad_chance, love_me_chance, mock_rng);
@@ -144,7 +144,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_should_love_you_never() -> Result<(), Error> {
-        let mock_rng = StepRng::new(10, 1);
+        let mock_rng = SeedableStepRng::new(10, 1);
         let dad_chance = None;
         let love_me_chance = None;
         let mut mgr = RngManager::new(dad_chance, love_me_chance, mock_rng);
