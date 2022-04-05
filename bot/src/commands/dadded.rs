@@ -13,6 +13,66 @@ use db::sea_orm::*;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::*;
+use getset::{Getters, Setters};
+
+#[derive(Debug, Clone, Getters, Setters)]
+struct DadDurationText {
+    #[getset(get = "pub", set)]
+    days: i64,
+    #[getset(get = "pub", set)]
+    hours: i64,
+    #[getset(get = "pub", set)]
+    minutes: i64
+
+}
+
+impl DadDurationText {
+    pub fn new(dur: Duration) -> Self {
+        let days = dur.num_days();
+        let dur = dur - Duration::days(dur.num_days());
+        let hours = dur.num_hours();
+        let dur = dur - Duration::hours(dur.num_hours());
+        let minutes = dur.num_minutes();
+        Self {
+            days,
+            hours,
+            minutes
+        }
+    }
+
+    pub fn get_text(self) -> String {
+        self.get_time_string_from_duration()
+    }
+
+    #[inline]
+    pub fn duration_time_to_string(num: i64, period_name: &str) -> (i64, String) {
+        let period_str = match num {
+            0 => String::new(),
+            1 => period_name.to_string(),
+            _ => format!("{}s", period_name),
+        };
+        (num, period_str)
+    }
+
+
+    pub fn get_time_string_from_duration(&self) -> String {
+        let days = DadDurationText::duration_time_to_string(*self.days(), "day");
+        let hours = DadDurationText::duration_time_to_string(*self.hours(), "hour");
+        let minutes = DadDurationText::duration_time_to_string(*self.minutes(), "minute");
+        let strings = vec![days, hours, minutes];
+        let strings = strings.iter().filter(|sm| sm.0 > 0).collect::<Vec<_>>();
+        match strings.len() {
+            0 => String::from("instant"),
+            1 => strings[0].1.clone(),
+            _ => strings
+                .iter()
+                .filter(|v| v.0 > 0)
+                .map(|v| format!("{} {}", v.0, v.1))
+                .collect::<Vec<_>>()
+                .join(" "),
+        }
+    }
+}
 
 #[command(help = "`!dadded` - How many times I've dadded today")]
 pub async fn dadded<'a>(
@@ -36,49 +96,6 @@ where
     Ok(())
 }
 
-#[inline]
-fn duration_time_to_string(num: i64, period_name: &str) -> (i64, String) {
-    let period_str = match num {
-        0 => String::new(),
-        1 => period_name.to_string(),
-        _ => format!("{}s", period_name),
-    };
-    (num, period_str)
-}
-
-#[inline]
-fn append_time_string_to_list(
-    str_list: (i64, String),
-    mut list: Vec<(i64, String)>,
-) -> Vec<(i64, String)> {
-    if str_list.0 > 0 {
-        list.push(str_list);
-    }
-    list
-}
-
-fn get_time_string_from_duration(dur: Duration) -> String {
-    let strings = vec![];
-    let days = duration_time_to_string(dur.num_days(), "day");
-    let strings = append_time_string_to_list(days, strings);
-    let dur = dur - Duration::days(dur.num_days());
-    let hours = duration_time_to_string(dur.num_hours(), "hour");
-    let strings = append_time_string_to_list(hours, strings);
-    let dur = dur - Duration::hours(dur.num_hours());
-    let minutes = duration_time_to_string(dur.num_minutes(), "minute");
-    let strings = append_time_string_to_list(minutes, strings);
-    match strings.len() {
-        0 => String::from("instant"),
-        1 => strings[0].1.clone(),
-        _ => strings
-            .iter()
-            .filter(|v| v.0 > 0)
-            .map(|v| format!("{} {}", v.0, v.1))
-            .collect::<Vec<_>>()
-            .join(" "),
-    }
-}
-
 async fn get_dads<'a>(
     db: &'a DbConn,
     dad_mgr: &'a mut DaddedManager,
@@ -95,7 +112,7 @@ async fn get_dads<'a>(
             "I've dadded {} {} in the past {}",
             dad.count,
             times,
-            get_time_string_from_duration(epoch_len)
+            DadDurationText::new(epoch_len).get_text()
         )
     } else {
         format!("I've dadded {} {} since my last nap", dad.count, times)
@@ -113,9 +130,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_duration_time_to_string() -> Result<(), Error> {
-        let none = duration_time_to_string(0, "day");
-        let single = duration_time_to_string(1, "day");
-        let multiple = duration_time_to_string(2, "day");
+        let none = DadDurationText::duration_time_to_string(0, "day");
+        let single = DadDurationText::duration_time_to_string(1, "day");
+        let multiple = DadDurationText::duration_time_to_string(2, "day");
 
         assert_eq!(none, (0, String::new()));
         assert_eq!(single, (1, String::from("day")));
@@ -127,7 +144,7 @@ mod tests {
     async fn test_get_time_string_from_duration_all_components_exist() -> Result<(), Error> {
         let duration = Duration::days(1) + Duration::hours(1) + Duration::minutes(1);
 
-        let time_str = get_time_string_from_duration(duration);
+        let time_str = DadDurationText::new(duration).get_text();
         assert_eq!(time_str, String::from("1 day 1 hour 1 minute"));
         Ok(())
     }
@@ -136,7 +153,7 @@ mod tests {
     async fn test_get_time_string_from_duration_some_components_exist() -> Result<(), Error> {
         let duration = Duration::days(2) + Duration::minutes(1);
 
-        let time_str = get_time_string_from_duration(duration);
+        let time_str = DadDurationText::new(duration).get_text();
         assert_eq!(time_str, String::from("2 days 1 minute"));
         Ok(())
     }
@@ -145,7 +162,7 @@ mod tests {
     async fn test_get_time_string_from_duration_lone_item_is_unit() -> Result<(), Error> {
         let duration = Duration::minutes(1);
 
-        let time_str = get_time_string_from_duration(duration);
+        let time_str = DadDurationText::new(duration).get_text();
         assert_eq!(time_str, String::from("minute"));
         Ok(())
     }
@@ -155,7 +172,7 @@ mod tests {
     {
         let duration = Duration::seconds(1);
 
-        let time_str = get_time_string_from_duration(duration);
+        let time_str = DadDurationText::new(duration).get_text();
         assert_eq!(time_str, String::from("instant"));
         Ok(())
     }
